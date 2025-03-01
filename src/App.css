@@ -17,12 +17,41 @@
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+@keyframes diceSlideOdd {
+  0% {
+    bottom: 0;
+    right: 0;
   }
-  to {
-    transform: rotate(360deg);
+  100% {
+    bottom: 600px;
+    right: 100px;
+  }
+}
+@keyframes diceSlideEven {
+  0% {
+    bottom: 0;
+    right: 0;
+  }
+  100% {
+    bottom: 500px;
+    right: 100px;
+  }
+}
+@keyframes shake {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-5px, 5px) rotate(-5deg);
+  }
+  50% {
+    transform: translate(5px, -5px) rotate(5deg);
+  }
+  75% {
+    transform: translate(-5px, 5px) rotate(-3deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
   }
 }
 

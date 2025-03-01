@@ -2,6 +2,8 @@
 @theme {
   --color-purple-grad-to: rgb(19, 18, 48);
   --color-purple-grad-from: rgb(48, 19, 39);
+  --color-violet-grad-from: rgb(70, 36, 73);
+  --color-violet-grad-to: rgb(54, 33, 76);
 }
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

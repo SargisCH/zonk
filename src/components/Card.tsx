@@ -1,7 +1,15 @@
 import clsx from "clsx";
-import React from "react";
+import { ReactNode } from "react";
 
-export default function Card({ variant }: { variant?: string }) {
+export default function Card({
+  variant,
+  title,
+  children,
+}: {
+  variant?: string;
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <div
       className={clsx(
@@ -12,14 +20,10 @@ export default function Card({ variant }: { variant?: string }) {
       )}
     >
       <div className="p-4">
-        <h2 className="text-2xl font-semibold text-gray-800">Card Title</h2>
-        <p className="text-gray-600 mt-2">
-          This is a simple description of the card. You can add details,
-          features, or any content here.
-        </p>
-        <button className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500">
-          Action Button
-        </button>
+        <h2 className="text-3xl font-semibold text-gray-400">{title}</h2>
+        <div className="bg-gray-400 h-1"></div>
+
+        <div className="p-4 mt-2">{children}</div>
       </div>
     </div>
   );
