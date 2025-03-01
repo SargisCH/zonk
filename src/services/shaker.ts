@@ -3,9 +3,9 @@ export default class Shaker {
   rand(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min);
   }
-  shake() {
+  shake(count = 6) {
     const dices = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < count; i++) {
       dices.push(this.rand(1, 7));
     }
     this.dices = dices;

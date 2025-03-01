@@ -1,32 +1,35 @@
 import { useEffect, useState } from "react";
 import Shaker from "../services/shaker";
 import { useParams } from "react-router";
-const defaultRounds: Array<{ dices: number[]; points: number }> = [
+const defaultShakes: Array<{ dices: number[]; points: number }> = [
   ...Array(6).fill({ dices: [], points: 0 }),
 ];
 import cupImg from "../assets/cup.png";
 import clsx from "clsx";
+import Dice from "../components/Dice";
 const shaker = new Shaker();
 export default function Game() {
   const [dices, setDices] = useState<number[]>([]);
   const [combinations, setCombinations] = useState({});
   const { gameId } = useParams();
-  const [rounds, setRounds] = useState(defaultRounds);
+  const [shakes, setShakes] = useState(defaultShakes);
   const [animationGenerated, setAnimationGenereated] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
+  const [shakeNumber, setShakeNumber] = useState(0);
   const shake = () => {
-    const dicesThrown = shaker.shake();
+    const dicesThrown = shaker.shake(6 - shakeNumber);
     setAnimationStarted(false);
     setAnimationGenereated(false);
     setDices(dicesThrown);
     setCombinations(shaker.getAllCombinations());
+    setShakeNumber(shakeNumber + 1);
   };
-  console.log("dices", gameId, dices, combinations, rounds);
+  console.log("dices", gameId, dices, combinations, shakes);
   useEffect(() => {
     const styleSheet = document.styleSheets[0]; // Get the first stylesheet (you could create a new one too)
 
     // Define the keyframe animation in a style block
-    dices.forEach((_, index) => {
+    [...Array(dices.length)].forEach((_, index) => {
       const keyframes = `
       @keyframes slideDice${index} {
         0% {
@@ -49,22 +52,26 @@ export default function Game() {
     return () => {
       styleSheet.deleteRule(styleSheet.cssRules.length - 1);
     };
-  }, [dices]);
+  }, [dices.length]);
+
+  const combinationsFlat = Object.values(combinations)
+    .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
+    .flat();
   return (
     <div className="h-screen bg-linear-to-b from-purple-grad-from to-purple-grad-to flex-auto  flex items-center justify-center">
       <div className="h-[800px] border-4">
         <div className="flex justify-center gap-4 h-full">
           <div className="w-[200px] px-4 pv-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to"></div>
           <div className="w-[600px] px-4 border-4 py-4 flex justify-end flex-col gap-4 relative">
-            {rounds.map((round, index) => {
+            {shakes.map((round, index) => {
               const diceContainers = [...Array(index + 1)];
               return (
-                <div className="flex gap-4">
+                <div className="flex gap-4" key={index}>
                   {diceContainers.map((_, diceIndex) => {
                     const dice: number = round.dices?.[diceIndex];
                     return (
-                      <div className="w-[60px] h-[60px] bg-gray-800 rounded-lg">
-                        {dice ?? ""}
+                      <div className="w-[60px] h-[60px] bg-gray-800 rounded-lg flex items-center justify-center">
+                        {dice ? <Dice dice={dice} /> : null}
                       </div>
                     );
                   })}
@@ -88,6 +95,8 @@ export default function Game() {
 
             {animationGenerated &&
               dices.map((dice, index) => {
+                const isDiceDisabled = !combinationsFlat.includes(dice);
+                console.log("combination flat", combinationsFlat);
                 return (
                   <button
                     key={index}
@@ -98,7 +107,24 @@ export default function Game() {
                       animationTimingFunction: "ease-in-out",
                       animationFillMode: "forwards",
                     }}
-                    className="absolute right  z-1 cursor-pointer w-[50px] h-[50px] bg-cover bg-center"
+                    className={clsx(
+                      !isDiceDisabled
+                        ? "cursor-pointer bg-red-600"
+                        : "pointer-events-none",
+                      "absolute right  z-1 w-[50px] rounded-full h-[50px] bg-cover bg-center",
+                    )}
+                    onClick={() => {
+                      const currentShake = {
+                        ...shakes[shakes.length - shakeNumber],
+                      };
+                      currentShake.dices = [...currentShake.dices, dice];
+                      const newShakes = [...shakes];
+                      newShakes[shakes.length - shakeNumber] = currentShake;
+                      setShakes(newShakes);
+                      const newDices = [...dices];
+                      newDices.splice(index, 1);
+                      setDices([...newDices]);
+                    }}
                   />
                 );
               })}
