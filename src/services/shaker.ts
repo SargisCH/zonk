@@ -12,6 +12,7 @@ export default class Shaker {
     return dices;
   }
   getStraight() {
+    if (this.dices.length < 6) return [];
     const dicesSorted = this.dices.sort((a, b) => a - b);
     const dups: { [key: number]: number } = {};
     for (const dice of dicesSorted) {

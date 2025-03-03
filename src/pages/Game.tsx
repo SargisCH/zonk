@@ -10,6 +10,7 @@ import Dice from "../components/Dice";
 const shaker = new Shaker();
 export default function Game() {
   const [dices, setDices] = useState<number[]>([]);
+  const [dicesCountForThrow, setDicesCountForThrow] = useState<number>();
   const [combinations, setCombinations] = useState({});
   const { gameId } = useParams();
   const [shakes, setShakes] = useState(defaultShakes);
@@ -23,13 +24,14 @@ export default function Game() {
     setDices(dicesThrown);
     setCombinations(shaker.getAllCombinations());
     setShakeNumber(shakeNumber + 1);
+    setDicesCountForThrow(6 - shakeNumber);
   };
   console.log("dices", gameId, dices, combinations, shakes);
   useEffect(() => {
     const styleSheet = document.styleSheets[0]; // Get the first stylesheet (you could create a new one too)
 
     // Define the keyframe animation in a style block
-    [...Array(dices.length)].forEach((_, index) => {
+    [...Array(dicesCountForThrow)].forEach((_, index) => {
       const keyframes = `
       @keyframes slideDice${index} {
         0% {
@@ -52,7 +54,7 @@ export default function Game() {
     return () => {
       styleSheet.deleteRule(styleSheet.cssRules.length - 1);
     };
-  }, [dices.length]);
+  }, [dicesCountForThrow]);
 
   const combinationsFlat = Object.values(combinations)
     .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
@@ -88,7 +90,10 @@ export default function Game() {
                     }
                   : {}
               }
-              onClick={() => setAnimationStarted(true)}
+              onClick={() => {
+                setAnimationGenereated(false);
+                setAnimationStarted(true);
+              }}
               onAnimationEnd={shake}
               className={`absolute z-2 right-0 bg-[url(/src/assets/cup.png)] cursor-pointer w-[160px] h-[180px] bg-cover bg-center`}
             ></button>
@@ -101,17 +106,14 @@ export default function Game() {
                   <button
                     key={index}
                     style={{
+                      animation: `slideDice${index} 1s ease-in-out forwards ${isDiceDisabled ? "" : ", dice-background-fade 1s ease-in-out infinite"} `,
                       backgroundImage: `url(/src/assets/dice-${dice}.png)`,
-                      animationName: `slideDice${index}`,
-                      animationDuration: "1s",
-                      animationTimingFunction: "ease-in-out",
-                      animationFillMode: "forwards",
                     }}
                     className={clsx(
                       !isDiceDisabled
-                        ? "cursor-pointer bg-red-600"
+                        ? "cursor-pointer"
                         : "pointer-events-none",
-                      "absolute right  z-1 w-[50px] rounded-full h-[50px] bg-cover bg-center",
+                      "absolute right  z-1 w-[50px] rounded-full h-[50px] bg-cover bg-center dice-game-button",
                     )}
                     onClick={() => {
                       const currentShake = {

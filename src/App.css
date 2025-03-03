@@ -54,6 +54,17 @@
     transform: translate(0, 0) rotate(0deg);
   }
 }
+@keyframes dice-background-fade {
+  0% {
+    box-shadow: -2px -1px 5px 6px rgba(255, 215, 0, 0);
+  }
+  50% {
+    box-shadow: -2px -1px 5px 6px rgba(255, 215, 0, 0.7);
+  }
+  100% {
+    box-shadow: -2px -1px 5px 6px rgba(255, 215, 0, 0);
+  }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   a:nth-of-type(2) .logo {
