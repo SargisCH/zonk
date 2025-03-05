@@ -1,8 +1,6 @@
-import React from "react";
+type Props = { dice: number; onClick: () => void };
 
-type Props = { dice: number };
-
-export default function Dice({ dice }: Props) {
+export default function Dice({ dice, onClick }: Props) {
   // Dice faces object with numbers as keys and dot positions as values
   const diceFaces: { [key: number]: Array<{ col: number; row: number }> } = {
     1: [{ col: 2, row: 2 }],
@@ -48,7 +46,10 @@ export default function Dice({ dice }: Props) {
     ));
   };
   return (
-    <div className="grid grid-cols-3 grid-rows-3 gap-1 w-[85%] h-[85%] bg-gray-300 border-2 border-gray-800 rounded-lg p-2">
+    <div
+      onClick={onClick}
+      className="grid grid-cols-3 grid-rows-3 gap-1 w-[85%] h-[85%] bg-gray-300 border-2 border-gray-800 rounded-lg p-2"
+    >
       {renderDiceFace(diceFaces[dice])}
     </div>
   );

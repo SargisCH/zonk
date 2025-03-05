@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Shaker from "../services/shaker";
 import { useParams } from "react-router";
 const defaultShakes: Array<{ dices: number[]; points: number }> = [
-  ...Array(6).fill({ dices: [], points: 0 }),
+  ...Array(6).fill({ dices: [], combinations: [], points: 0 }),
 ];
-import cupImg from "../assets/cup.png";
+
 import clsx from "clsx";
 import Dice from "../components/Dice";
 const shaker = new Shaker();
@@ -26,7 +26,6 @@ export default function Game() {
     setShakeNumber(shakeNumber + 1);
     setDicesCountForThrow(6 - shakeNumber);
   };
-  console.log("dices", gameId, dices, combinations, shakes);
   useEffect(() => {
     const styleSheet = document.styleSheets[0]; // Get the first stylesheet (you could create a new one too)
 
@@ -59,6 +58,27 @@ export default function Game() {
   const combinationsFlat = Object.values(combinations)
     .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
     .flat();
+
+  const sameNumberIndexes = useMemo(() => {
+    const currentShakeDices = (
+      shakes[shakes.length - shakeNumber]?.dices ?? []
+    ).sort((a, b) => a - b);
+    const points = shaker.getPoints(currentShakeDices);
+    console.log("points", points);
+    if (points.sameNumbers?.length) {
+      return points.sameNumbers.map((sameNumberComb) => {
+        const combDice = sameNumberComb.dices?.[0];
+        const startIndex = currentShakeDices.indexOf(combDice);
+        const lastIndex = currentShakeDices.lastIndexOf(combDice);
+        return {
+          dice: combDice,
+          startIndex,
+          lastIndex,
+          points: sameNumberComb.points,
+        };
+      });
+    }
+  }, [shakes, shakeNumber]);
   return (
     <div className="h-screen bg-linear-to-b from-purple-grad-from to-purple-grad-to flex-auto  flex items-center justify-center">
       <div className="h-[800px] border-4">
@@ -68,12 +88,54 @@ export default function Game() {
             {shakes.map((round, index) => {
               const diceContainers = [...Array(index + 1)];
               return (
-                <div className="flex gap-4" key={index}>
+                <div className="flex gap-[16px]" key={index}>
                   {diceContainers.map((_, diceIndex) => {
-                    const dice: number = round.dices?.[diceIndex];
+                    const roundDices = round.dices.sort((a, b) => a - b);
+                    const dice: number = roundDices?.[diceIndex];
+                    const sameNumberComb = sameNumberIndexes?.find(
+                      (sameNumberIndexObj) =>
+                        sameNumberIndexObj.startIndex === diceIndex,
+                    );
                     return (
-                      <div className="w-[60px] h-[60px] bg-gray-800 rounded-lg flex items-center justify-center">
-                        {dice ? <Dice dice={dice} /> : null}
+                      <div className="w-[60px] h-[60px] bg-gray-800 rounded-lg flex items-center justify-center relative">
+                        {sameNumberComb && 6 - shakeNumber === index && (
+                          <div
+                            style={{
+                              width: `${
+                                60 *
+                                  (sameNumberComb.lastIndex -
+                                    sameNumberComb.startIndex) +
+                                +(
+                                  sameNumberComb.lastIndex -
+                                  sameNumberComb.startIndex
+                                ) *
+                                  16
+                              }px`,
+                            }}
+                            className="z-3 top-[20px] -mt-[30px] h-[10px] left-[30px] absolute border border-b-0 border-white text-white text-center"
+                          >
+                            <div className="-mt-[22px]">
+                              {sameNumberComb.points}
+                            </div>
+                          </div>
+                        )}
+                        {dice ? (
+                          <Dice
+                            dice={dice}
+                            onClick={() => {
+                              const shakeRound =
+                                shakes[shakes.length - shakeNumber];
+                              const shakeRoundDices = [...shakeRound.dices];
+                              const diceIndex = shakeRoundDices.indexOf(dice);
+                              shakeRoundDices.splice(diceIndex, 1);
+                              const newShakes = [...shakes];
+                              newShakes[shakes.length - shakeNumber].dices =
+                                shakeRoundDices;
+                              setShakes([...newShakes]);
+                              setDices([...dices, dice]);
+                            }}
+                          />
+                        ) : null}
                       </div>
                     );
                   })}
@@ -101,7 +163,6 @@ export default function Game() {
             {animationGenerated &&
               dices.map((dice, index) => {
                 const isDiceDisabled = !combinationsFlat.includes(dice);
-                console.log("combination flat", combinationsFlat);
                 return (
                   <button
                     key={index}
