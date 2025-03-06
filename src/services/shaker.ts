@@ -31,8 +31,8 @@ export default class Shaker {
     for (let i = 0; i < count; i++) {
       dices.push(this.rand(1, 7));
     }
-    this.dices = [1, 1, 1, 1, 1, 2];
-    return [1, 1, 1, 1, 1, 2];
+    this.dices = dices;
+    return dices;
   }
   getStraight(dices = this.dices) {
     if (dices.length < 6) return [];
@@ -48,6 +48,7 @@ export default class Shaker {
     return dicesSorted;
   }
   getThreePairs(dices = this.dices) {
+    if (dices.length !== 6) return [];
     const pairsMap: { [key: number]: number } = {};
     for (const dice of dices) {
       pairsMap[dice] = pairsMap[dice] ? pairsMap[dice] + 1 : 1;
@@ -104,7 +105,6 @@ export default class Shaker {
     };
   }
   getPoints(selectedDices: number[]) {
-    console.log("selected diecs", selectedDices);
     const combs = this.getAllCombinations(selectedDices);
     const sameNumbersPoints = combs.sameNumbers.length
       ? [

@@ -7,6 +7,8 @@ const defaultShakes: Array<{ dices: number[]; points: number }> = [
 
 import clsx from "clsx";
 import Dice from "../components/Dice";
+const DICE_CONTAINER_WIDTH = 60;
+const DICE_CONTAINERS_GAP = 16;
 const shaker = new Shaker();
 export default function Game() {
   const [dices, setDices] = useState<number[]>([]);
@@ -17,14 +19,21 @@ export default function Game() {
   const [animationGenerated, setAnimationGenereated] = useState(false);
   const [animationStarted, setAnimationStarted] = useState(false);
   const [shakeNumber, setShakeNumber] = useState(0);
+  const [slideAnimationEnded, setSlideAnimationEnded] = useState(false);
   const shake = () => {
-    const dicesThrown = shaker.shake(6 - shakeNumber);
+    // substracting from all dice count (6) the already thrown dices count (last rounds count)
+    const alreadyThrownDiceCount = shakes.reduce(
+      (acc, prev) => acc + prev.dices.length,
+      0,
+    );
+    const dicesLeft = 6 - alreadyThrownDiceCount;
+    const dicesThrown = shaker.shake(dicesLeft);
     setAnimationStarted(false);
     setAnimationGenereated(false);
     setDices(dicesThrown);
     setCombinations(shaker.getAllCombinations());
     setShakeNumber(shakeNumber + 1);
-    setDicesCountForThrow(6 - shakeNumber);
+    setDicesCountForThrow(dicesLeft);
   };
   useEffect(() => {
     const styleSheet = document.styleSheets[0]; // Get the first stylesheet (you could create a new one too)
@@ -34,7 +43,7 @@ export default function Game() {
       const keyframes = `
       @keyframes slideDice${index} {
         0% {
-          bottom: 40px;
+          bottom: 90px;
           right: 30px;
         }
         100% {
@@ -59,14 +68,19 @@ export default function Game() {
     .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
     .flat();
 
-  const sameNumberIndexes = useMemo(() => {
+  const { sameNumberIndexes, pointsPerShake } = useMemo(() => {
     const currentShakeDices = (
       shakes[shakes.length - shakeNumber]?.dices ?? []
     ).sort((a, b) => a - b);
     const points = shaker.getPoints(currentShakeDices);
-    console.log("points", points);
+    let sameNumbersIndexesTemp: Array<{
+      dice: number;
+      startIndex: number;
+      lastIndex: number;
+      points: number;
+    }> = [];
     if (points.sameNumbers?.length) {
-      return points.sameNumbers.map((sameNumberComb) => {
+      sameNumbersIndexesTemp = points.sameNumbers.map((sameNumberComb) => {
         const combDice = sameNumberComb.dices?.[0];
         const startIndex = currentShakeDices.indexOf(combDice);
         const lastIndex = currentShakeDices.lastIndexOf(combDice);
@@ -78,7 +92,14 @@ export default function Game() {
         };
       });
     }
+    const pointsPerShake = Object.values(points)
+      ?.flat()
+      .reduce((acc, { points }) => {
+        return points + acc;
+      }, 0);
+    return { pointsPerShake, sameNumberIndexes: sameNumbersIndexesTemp };
   }, [shakes, shakeNumber]);
+  const shakeRound = shakes[shakes.length - shakeNumber];
   return (
     <div className="h-screen bg-linear-to-b from-purple-grad-from to-purple-grad-to flex-auto  flex items-center justify-center">
       <div className="h-[800px] border-4">
@@ -96,21 +117,18 @@ export default function Game() {
                       (sameNumberIndexObj) =>
                         sameNumberIndexObj.startIndex === diceIndex,
                     );
+                    const diceDistance =
+                      (sameNumberComb?.lastIndex ?? 0) -
+                      (sameNumberComb?.startIndex ?? 0);
+                    const combinationRangeWidth =
+                      DICE_CONTAINER_WIDTH * diceDistance +
+                      DICE_CONTAINERS_GAP * diceDistance;
                     return (
                       <div className="w-[60px] h-[60px] bg-gray-800 rounded-lg flex items-center justify-center relative">
                         {sameNumberComb && 6 - shakeNumber === index && (
                           <div
                             style={{
-                              width: `${
-                                60 *
-                                  (sameNumberComb.lastIndex -
-                                    sameNumberComb.startIndex) +
-                                +(
-                                  sameNumberComb.lastIndex -
-                                  sameNumberComb.startIndex
-                                ) *
-                                  16
-                              }px`,
+                              width: `${combinationRangeWidth}px`,
                             }}
                             className="z-3 top-[20px] -mt-[30px] h-[10px] left-[30px] absolute border border-b-0 border-white text-white text-center"
                           >
@@ -123,8 +141,6 @@ export default function Game() {
                           <Dice
                             dice={dice}
                             onClick={() => {
-                              const shakeRound =
-                                shakes[shakes.length - shakeNumber];
                               const shakeRoundDices = [...shakeRound.dices];
                               const diceIndex = shakeRoundDices.indexOf(dice);
                               shakeRoundDices.splice(diceIndex, 1);
@@ -139,6 +155,15 @@ export default function Game() {
                       </div>
                     );
                   })}
+                  <div className="flex items-center">
+                    <span className="text-white">
+                      {pointsPerShake > 0 && index === 6 - shakeNumber
+                        ? pointsPerShake
+                        : index > 6 - shakeNumber
+                          ? shakes[index].points
+                          : ""}
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -155,20 +180,45 @@ export default function Game() {
               onClick={() => {
                 setAnimationGenereated(false);
                 setAnimationStarted(true);
+                setSlideAnimationEnded(false);
+                // update points
+                const shakesTemp = [...shakes];
+                shakesTemp[shakes.length - shakeNumber].points = pointsPerShake;
+                setShakes(shakesTemp);
               }}
               onAnimationEnd={shake}
-              className={`absolute z-2 right-0 bg-[url(/src/assets/cup.png)] cursor-pointer w-[160px] h-[180px] bg-cover bg-center`}
+              className={`absolute z-2 right-0 bottom-16 bg-[url(/src/assets/cup.png)] cursor-pointer w-[160px] h-[180px] bg-cover bg-center`}
             ></button>
 
             {animationGenerated &&
               dices.map((dice, index) => {
                 const isDiceDisabled = !combinationsFlat.includes(dice);
+                const lightAnimation =
+                  "dice-background-fade 1s ease-in-out infinite";
+                const diceElementAnimation = `slideDice${index} 1s ease-in-out forwards`;
+                const isEven = index % 2 === 0;
+                const positionStyles = slideAnimationEnded
+                  ? {
+                      bottom: !isEven ? "500px" : "600px",
+                      right: `${(index + 1) * 70}px`,
+                    }
+                  : {};
                 return (
                   <button
                     key={index}
                     style={{
-                      animation: `slideDice${index} 1s ease-in-out forwards ${isDiceDisabled ? "" : ", dice-background-fade 1s ease-in-out infinite"} `,
+                      animation: !slideAnimationEnded
+                        ? diceElementAnimation
+                        : !isDiceDisabled
+                          ? lightAnimation
+                          : "",
                       backgroundImage: `url(/src/assets/dice-${dice}.png)`,
+                      ...positionStyles,
+                    }}
+                    onAnimationEnd={() => {
+                      if (index === 0) {
+                        setSlideAnimationEnded(true);
+                      }
                     }}
                     className={clsx(
                       !isDiceDisabled
