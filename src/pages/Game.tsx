@@ -7,11 +7,18 @@ const defaultShakes: Array<{ dices: number[]; points: number }> = [
 
 import clsx from "clsx";
 import Dice from "../components/Dice";
+import RoundController from "../controllers/RoundController";
+import { GameState, useGameStore } from "../store/game";
+import Rounds from "../components/Rounds";
 const DICE_CONTAINER_WIDTH = 60;
 const DICE_CONTAINERS_GAP = 16;
 const shaker = new Shaker();
+const roundController = new RoundController();
+roundController.init();
+
 export default function Game() {
-  const [dices, setDices] = useState<number[]>([]);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [dices, setDices] = useState<{ dice: number; removed: boolean }[]>([]);
   const [dicesCountForThrow, setDicesCountForThrow] = useState<number>();
   const [combinations, setCombinations] = useState({});
   const { gameId } = useParams();
@@ -20,17 +27,21 @@ export default function Game() {
   const [animationStarted, setAnimationStarted] = useState(false);
   const [shakeNumber, setShakeNumber] = useState(0);
   const [slideAnimationEnded, setSlideAnimationEnded] = useState(false);
+  const { setCurrentRoundPoints } = useGameStore((state: GameState) => state);
+
   const shake = () => {
     // substracting from all dice count (6) the already thrown dices count (last rounds count)
     const alreadyThrownDiceCount = shakes.reduce(
       (acc, prev) => acc + prev.dices.length,
       0,
     );
+    roundController.startNewRound();
+    // setRounds(roundController.getRounds());
     const dicesLeft = 6 - alreadyThrownDiceCount;
     const dicesThrown = shaker.shake(dicesLeft);
     setAnimationStarted(false);
     setAnimationGenereated(false);
-    setDices(dicesThrown);
+    setDices(dicesThrown.map((dice) => ({ dice, removed: false })));
     setCombinations(shaker.getAllCombinations());
     setShakeNumber(shakeNumber + 1);
     setDicesCountForThrow(dicesLeft);
@@ -63,10 +74,12 @@ export default function Game() {
       styleSheet.deleteRule(styleSheet.cssRules.length - 1);
     };
   }, [dicesCountForThrow]);
+  const currentRoundPoints = shakes[6 - shakeNumber]?.points;
 
   const combinationsFlat = Object.values(combinations)
     .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
     .flat();
+  const zonkRound = combinationsFlat.length === 0;
 
   const { sameNumberIndexes, pointsPerShake } = useMemo(() => {
     const currentShakeDices = (
@@ -100,11 +113,19 @@ export default function Game() {
     return { pointsPerShake, sameNumberIndexes: sameNumbersIndexesTemp };
   }, [shakes, shakeNumber]);
   const shakeRound = shakes[shakes.length - shakeNumber];
+  useEffect(() => {
+    const currentRoundPoints =
+      shakes.reduce((acc, shake) => shake.points + acc, 0) + pointsPerShake;
+    setCurrentRoundPoints(currentRoundPoints);
+  }, [pointsPerShake, setCurrentRoundPoints, shakes]);
+
   return (
     <div className="h-screen bg-linear-to-b from-purple-grad-from to-purple-grad-to flex-auto  flex items-center justify-center">
       <div className="h-[800px] border-4">
         <div className="flex justify-center gap-4 h-full">
-          <div className="w-[200px] px-4 pv-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to"></div>
+          <div className="w-[200px] px-4 pv-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to">
+            <Rounds />
+          </div>
           <div className="w-[600px] px-4 border-4 py-4 flex justify-end flex-col gap-4 relative">
             {shakes.map((round, index) => {
               const diceContainers = [...Array(index + 1)];
@@ -148,7 +169,16 @@ export default function Game() {
                               newShakes[shakes.length - shakeNumber].dices =
                                 shakeRoundDices;
                               setShakes([...newShakes]);
-                              setDices([...dices, dice]);
+                              const diceFound = dices.find(
+                                (diceObject) =>
+                                  diceObject.dice === dice &&
+                                  diceObject.removed,
+                              );
+                              if (diceFound) {
+                                diceFound.removed = false;
+
+                                setDices([...dices]);
+                              }
                             }}
                           />
                         ) : null}
@@ -181,6 +211,7 @@ export default function Game() {
                 setAnimationGenereated(false);
                 setAnimationStarted(true);
                 setSlideAnimationEnded(false);
+                setGameStarted(true);
                 // update points
                 const shakesTemp = [...shakes];
                 shakesTemp[shakes.length - shakeNumber].points = pointsPerShake;
@@ -191,7 +222,7 @@ export default function Game() {
             ></button>
 
             {animationGenerated &&
-              dices.map((dice, index) => {
+              dices.map(({ dice, removed }, index) => {
                 const isDiceDisabled = !combinationsFlat.includes(dice);
                 const lightAnimation =
                   "dice-background-fade 1s ease-in-out infinite";
@@ -203,6 +234,7 @@ export default function Game() {
                       right: `${(index + 1) * 70}px`,
                     }
                   : {};
+                if (removed) return null;
                 return (
                   <button
                     key={index}
@@ -235,12 +267,21 @@ export default function Game() {
                       newShakes[shakes.length - shakeNumber] = currentShake;
                       setShakes(newShakes);
                       const newDices = [...dices];
-                      newDices.splice(index, 1);
+                      newDices[index].removed = true;
                       setDices([...newDices]);
                     }}
                   />
                 );
               })}
+            {zonkRound &&
+              !animationStarted &&
+              dices.length > 0 &&
+              slideAnimationEnded &&
+              gameStarted && (
+                <div className="animate-[zonk-opacity_1.5s_ease-in-out_infinite] absolute top-[35%] left-[20%] text-green-700 text-9xl select-none">
+                  ZONK!
+                </div>
+              )}
           </div>
           <div className="w-[200px] px-4 py-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to"></div>
         </div>
