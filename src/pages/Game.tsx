@@ -10,11 +10,14 @@ import Dice from "../components/Dice";
 import RoundController from "../controllers/RoundController";
 import { GameState, useGameStore } from "../store/game";
 import Rounds from "../components/Rounds";
+import BonusImg from "../assets/bonus.png";
+
 const DICE_CONTAINER_WIDTH = 60;
 const DICE_CONTAINERS_GAP = 16;
 const shaker = new Shaker();
 const roundController = new RoundController();
 roundController.init();
+const rounds = roundController.getRounds();
 
 export default function Game() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -27,15 +30,30 @@ export default function Game() {
   const [animationStarted, setAnimationStarted] = useState(false);
   const [shakeNumber, setShakeNumber] = useState(0);
   const [slideAnimationEnded, setSlideAnimationEnded] = useState(false);
-  const { setCurrentRoundPoints } = useGameStore((state: GameState) => state);
+  const [isGameFinished, setIsGameFinished] = useState(false);
+  const { setCurrentRoundPoints, currentRoundPoints } = useGameStore(
+    (state: GameState) => state,
+  );
 
+  const saveRecordedPoints = useGameStore((state) => state.saveRecordedPoints);
+  const bonusRound = useMemo(
+    () => dices.filter((dice) => !dice.removed).length === 0,
+    [dices],
+  );
+  useEffect(() => {
+    if (bonusRound) {
+      setDicesCountForThrow(0);
+    }
+  }, [bonusRound, setDicesCountForThrow]);
   const shake = () => {
     // substracting from all dice count (6) the already thrown dices count (last rounds count)
-    const alreadyThrownDiceCount = shakes.reduce(
-      (acc, prev) => acc + prev.dices.length,
-      0,
-    );
-    roundController.startNewRound();
+    const alreadyThrownDiceCount =
+      bonusRound || shakeNumber === 0
+        ? 0
+        : shakes.reduce((acc, prev) => acc + prev.dices.length, 0);
+    if (shakeNumber === 0) {
+      roundController.startNewRound();
+    }
     // setRounds(roundController.getRounds());
     const dicesLeft = 6 - alreadyThrownDiceCount;
     const dicesThrown = shaker.shake(dicesLeft);
@@ -43,7 +61,7 @@ export default function Game() {
     setAnimationGenereated(false);
     setDices(dicesThrown.map((dice) => ({ dice, removed: false })));
     setCombinations(shaker.getAllCombinations());
-    setShakeNumber(shakeNumber + 1);
+    setShakeNumber(bonusRound ? 1 : shakeNumber + 1);
     setDicesCountForThrow(dicesLeft);
   };
   useEffect(() => {
@@ -74,12 +92,16 @@ export default function Game() {
       styleSheet.deleteRule(styleSheet.cssRules.length - 1);
     };
   }, [dicesCountForThrow]);
-  const currentRoundPoints = shakes[6 - shakeNumber]?.points;
-
+  // const currentRoundPoints = shakes[6 - shakeNumber]?.points;
+  const resetRound = () => {
+    setShakeNumber(0);
+    setShakes(defaultShakes);
+    setDices([]);
+    setDicesCountForThrow(0);
+  };
   const combinationsFlat = Object.values(combinations)
     .map((comb) => (Array.isArray(comb) ? comb.flat() : comb))
     .flat();
-  const zonkRound = combinationsFlat.length === 0;
 
   const { sameNumberIndexes, pointsPerShake } = useMemo(() => {
     const currentShakeDices = (
@@ -114,17 +136,54 @@ export default function Game() {
   }, [shakes, shakeNumber]);
   const shakeRound = shakes[shakes.length - shakeNumber];
   useEffect(() => {
-    const currentRoundPoints =
-      shakes.reduce((acc, shake) => shake.points + acc, 0) + pointsPerShake;
-    setCurrentRoundPoints(currentRoundPoints);
-  }, [pointsPerShake, setCurrentRoundPoints, shakes]);
-
+    if (!animationStarted) {
+      const currentRoundPoints =
+        shakes.reduce((acc, shake) => shake.points + acc, 0) + pointsPerShake;
+      setCurrentRoundPoints(currentRoundPoints);
+    }
+  }, [pointsPerShake, setCurrentRoundPoints, shakes, animationStarted]);
+  const zonkRound = useMemo(() => {
+    return (
+      combinationsFlat.length === 0 &&
+      !animationStarted &&
+      dices.length > 0 &&
+      slideAnimationEnded &&
+      gameStarted
+    );
+  }, [
+    combinationsFlat.length,
+    animationStarted,
+    dices.length,
+    slideAnimationEnded,
+    gameStarted,
+  ]);
+  useEffect(() => {
+    if (zonkRound) {
+      setShakeNumber(0);
+      setDicesCountForThrow(0);
+    }
+  }, [zonkRound]);
+  const isWin = isGameFinished && roundController.isWin();
+  const minPointsForRound = roundController.getMinPointsForRound();
+  const notEnoughPoints = (currentRoundPoints ?? 0) < minPointsForRound;
+  const finishRound = (roundPoints: number) => {
+    roundController.finishRound(roundPoints);
+    if (roundController.isGameFinished()) {
+      setIsGameFinished(true);
+    }
+  };
   return (
     <div className="h-screen bg-linear-to-b from-purple-grad-from to-purple-grad-to flex-auto  flex items-center justify-center">
       <div className="h-[800px] border-4">
         <div className="flex justify-center gap-4 h-full">
           <div className="w-[200px] px-4 pv-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to">
-            <Rounds />
+            <Rounds
+              finishRound={finishRound}
+              notEnoughPoints={notEnoughPoints}
+              rounds={rounds}
+              currentRound={roundController.getCurentRound()}
+              handleSavePoints={resetRound}
+            />
           </div>
           <div className="w-[600px] px-4 border-4 py-4 flex justify-end flex-col gap-4 relative">
             {shakes.map((round, index) => {
@@ -176,7 +235,6 @@ export default function Game() {
                               );
                               if (diceFound) {
                                 diceFound.removed = false;
-
                                 setDices([...dices]);
                               }
                             }}
@@ -208,18 +266,36 @@ export default function Game() {
                   : {}
               }
               onClick={() => {
+                if (zonkRound) {
+                  resetRound();
+                  roundController.zonkRound();
+                } else if (bonusRound) {
+                  saveRecordedPoints();
+                  setShakes([...defaultShakes]);
+                } else {
+                  // update points
+                  const shakesTemp = [...shakes];
+                  shakesTemp[shakes.length - shakeNumber].points =
+                    pointsPerShake;
+                  setShakes(shakesTemp);
+                }
                 setAnimationGenereated(false);
                 setAnimationStarted(true);
                 setSlideAnimationEnded(false);
                 setGameStarted(true);
-                // update points
-                const shakesTemp = [...shakes];
-                shakesTemp[shakes.length - shakeNumber].points = pointsPerShake;
-                setShakes(shakesTemp);
               }}
               onAnimationEnd={shake}
               className={`absolute z-2 right-0 bottom-16 bg-[url(/src/assets/cup.png)] cursor-pointer w-[160px] h-[180px] bg-cover bg-center`}
-            ></button>
+            >
+              {bonusRound &&
+                gameStarted &&
+                slideAnimationEnded &&
+                dices.length && (
+                  <div className="absolute top-[-100px] left-[-65px]">
+                    <img src={BonusImg} />
+                  </div>
+                )}
+            </button>
 
             {animationGenerated &&
               dices.map(({ dice, removed }, index) => {
@@ -273,15 +349,22 @@ export default function Game() {
                   />
                 );
               })}
-            {zonkRound &&
-              !animationStarted &&
-              dices.length > 0 &&
-              slideAnimationEnded &&
-              gameStarted && (
-                <div className="animate-[zonk-opacity_1.5s_ease-in-out_infinite] absolute top-[35%] left-[20%] text-green-700 text-9xl select-none">
-                  ZONK!
+            {zonkRound && !isGameFinished && (
+              <div className="animate-[zonk-opacity_1.5s_ease-in-out_infinite] absolute top-[35%] left-[20%] text-green-700 text-9xl select-none">
+                ZONK!
+              </div>
+            )}
+            {isGameFinished ? (
+              isWin ? (
+                <div className="absolute top-[35%] left-[20%] text-green-700 text-9xl select-none">
+                  WIN!
                 </div>
-              )}
+              ) : (
+                <div className="absolute top-[35%] left-[20%] text-red-700 text-9xl select-none">
+                  LOSE!
+                </div>
+              )
+            ) : null}
           </div>
           <div className="w-[200px] px-4 py-4 border-4 bg-linear-to-b from-violet-grad-from to-violet-grad-to"></div>
         </div>
