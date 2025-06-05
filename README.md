@@ -2,6 +2,8 @@
 
 Zonk is a modular, TypeScript-based React application/game powered by Vite and Zustand. I have created it just to work with a technologies that I am interested in and also to have it in my portfolio . It includes a clean architecture with separation of concerns across components, controllers, services, hooks, and helpers. Controllers and service act like a back and service or a class that handles business logic.
 
+DEMO: https://zonk-demo.surge.sh/
+
 ## 📁 Project Structure
 
 zonk/
