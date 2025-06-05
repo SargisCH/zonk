@@ -1,4 +1,5 @@
 @import "tailwindcss";
+
 @theme {
   --color-purple-grad-to: rgb(19, 18, 48);
   --color-purple-grad-from: rgb(48, 19, 39);

@@ -1,6 +1,5 @@
 import {
   AllCombinations,
-  Points,
   SameNumberCombination,
   SameNumberPoints,
   SingleNumberCombination,
@@ -34,7 +33,7 @@ export default class Shaker {
     singleNumbers: {
       1: 100,
       5: 50,
-    },
+    } as { [key: number]: number },
   };
   dices: Array<number> = [];
   rand(min: number, max: number) {
