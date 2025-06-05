@@ -1,5 +1,12 @@
 import clsx from "clsx";
+import Dice1 from "../assets/dice-1.png";
+import Dice2 from "../assets/dice-2.png";
+import Dice3 from "../assets/dice-3.png";
+import Dice4 from "../assets/dice-4.png";
+import Dice5 from "../assets/dice-5.png";
+import Dice6 from "../assets/dice-6.png";
 
+const diceImages = [null, Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
 export default function Dice({
   index,
   combinations,
@@ -37,7 +44,7 @@ export default function Dice({
           : !isDiceDisabled
             ? lightAnimation
             : "",
-        backgroundImage: `url(/src/assets/dice-${dice}.png)`,
+        backgroundImage: `url(${diceImages[dice]})`,
         ...positionStyles,
       }}
       onAnimationEnd={() => {

@@ -61,7 +61,12 @@ export default function Game() {
 
     // Cleanup function to remove keyframes when the component unmounts
     return () => {
-      styleSheet.deleteRule(styleSheet.cssRules.length - 1);
+      const sheet = document.styleSheets[0];
+      const ruleIndex = sheet.cssRules.length - 1;
+
+      if (ruleIndex >= 0) {
+        sheet.deleteRule(ruleIndex);
+      }
     };
   }, [dicesCountForThrow]);
 
