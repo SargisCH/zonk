@@ -10,17 +10,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route
-          path="/game/:gameId"
-          element={
-            <ErrorBoundary
-              FallbackComponent={ErrorFallback}
-              onReset={() => window.location.reload()}
-            >
-              <Game />
-            </ErrorBoundary>
-          }
-        />
+        <Route path="/game/:gameId" element={<Game />} />
       </Routes>
     </BrowserRouter>
   );

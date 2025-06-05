@@ -40,7 +40,6 @@ export default class RoundController {
     this.rounds[this.currentRound].finished = true;
     this.rounds[this.currentRound].inProgress = false;
     this.rounds[this.currentRound].points = points;
-    console.log("max round", this.currentRound, RoundController.roundsMax);
     if (this.currentRound + 1 === RoundController.roundsMax) {
       this.gameFinished = true;
     }
@@ -50,6 +49,9 @@ export default class RoundController {
     this.rounds[this.currentRound].inProgress = false;
     this.rounds[this.currentRound].points = 0;
     this.rounds[this.currentRound].zonk = true;
+    if (this.currentRound + 1 === RoundController.roundsMax) {
+      this.gameFinished = true;
+    }
   }
   getPreviousRound() {
     return this.currentRound - 1;

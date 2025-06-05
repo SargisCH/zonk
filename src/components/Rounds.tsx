@@ -1,20 +1,24 @@
+import { useEffect, useState } from "react";
 import Button from "./Button";
 import { useGameStore } from "../store/game";
-import { useEffect, useState } from "react";
+
 const DISTANCE_BETWEEN_ROUNDS = 14;
 const TAILWIND_SPACING = "0.25rem";
+
 export default function Rounds({
   handleSavePoints,
   rounds,
   notEnoughPoints,
   finishRound,
   currentRound,
+  allPoints,
 }: {
   handleSavePoints: () => void;
   rounds: Array<{ inProgress: boolean; points: number }>;
   notEnoughPoints: boolean;
   finishRound: (roundPoints: number) => void;
   currentRound: number;
+  allPoints: number;
 }) {
   const { currentRoundPoints, recordedPoints, resetRecordedPoints } =
     useGameStore((state) => state);
@@ -34,17 +38,24 @@ export default function Rounds({
           className="transition-[top] duration-500 absolute top-0 rounded bg-transparent py-5 px-5 border-2 border-solid border-pink-500 w-full"
         ></div>
         {rounds.map((round, index) => {
+          const isPastRound = currentRound > index;
           return (
             <div className="rounded bg-purple-800 py-2 px-2 flex justify-between ">
               <span className="text-white">{index + 1}</span>
               <span className="text-white">
                 {round.inProgress
                   ? recordedPoints + currentRoundPoints
-                  : round.points}
+                  : isPastRound && round.points === 0
+                    ? "ZONK"
+                    : round.points}
               </span>
             </div>
           );
         })}
+      </div>
+
+      <div className="flex justify-center w-full py-4 bottom-0 text-white">
+        Points: {allPoints}
       </div>
       <div className="absolute flex justify-center w-full py-4 bottom-0">
         <Button

@@ -1,4 +1,18 @@
+import {
+  AllCombinations,
+  Points,
+  SameNumberCombination,
+  SameNumberPoints,
+  SingleNumberCombination,
+  SingleNumberPoints,
+  StraightCombination,
+  StraightPoints,
+  ThreePairsCombination,
+  ThreePairsPoints,
+} from "../types";
+
 export default class Shaker {
+  static diceThrowCount = 6;
   private points = {
     straight: 1500,
     sameNumbers: (numbers: number[]) => {
@@ -26,7 +40,7 @@ export default class Shaker {
   rand(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min);
   }
-  shake(count = 6) {
+  shake(count = Shaker.diceThrowCount) {
     const dices = [];
     for (let i = 0; i < count; i++) {
       dices.push(this.rand(1, 7));
@@ -34,8 +48,8 @@ export default class Shaker {
     this.dices = dices;
     return dices;
   }
-  getStraight(dices = this.dices) {
-    if (dices.length < 6) return [];
+  getStraight(dices = this.dices): StraightCombination {
+    if (dices.length < Shaker.diceThrowCount) return [];
     const dicesSorted = dices.sort((a, b) => a - b);
     const dups: { [key: number]: number } = {};
     for (const dice of dicesSorted) {
@@ -47,14 +61,14 @@ export default class Shaker {
     }
     return dicesSorted;
   }
-  getThreePairs(dices = this.dices) {
-    if (dices.length !== 6) return [];
+  getThreePairs(dices = this.dices): ThreePairsCombination {
+    if (dices.length !== Shaker.diceThrowCount) return [];
     const pairsMap: { [key: number]: number } = {};
     for (const dice of dices) {
       pairsMap[dice] = pairsMap[dice] ? pairsMap[dice] + 1 : 1;
     }
     if (Object.values(pairsMap).every((dice) => dice === 2)) {
-      const result: number[] = [];
+      const result: ThreePairsCombination = [];
       Object.keys(pairsMap).forEach((key) => {
         result.push(Number(key));
         result.push(Number(key));
@@ -64,14 +78,14 @@ export default class Shaker {
       return [];
     }
   }
-  getSameNumbers(dices = this.dices) {
+  getSameNumbers(dices = this.dices): SameNumberCombination {
     const sameNumbersMap: { [key: number]: number } = {};
     for (const dice of dices) {
       sameNumbersMap[dice] = sameNumbersMap[dice]
         ? sameNumbersMap[dice] + 1
         : 1;
     }
-    const result: Array<Array<number>> = [];
+    const result: SameNumberCombination = [];
     Object.entries(sameNumbersMap).forEach(([key, value]) => {
       if (value >= 3) {
         result.push([...Array(value).fill(Number(key))]);
@@ -79,8 +93,8 @@ export default class Shaker {
     });
     return result;
   }
-  getSingleNumber(dices = this.dices) {
-    const result: number[] = [];
+  getSingleNumber(dices = this.dices): SingleNumberCombination {
+    const result: SingleNumberCombination = [];
     dices.forEach((dice) => {
       if (dice === 1 || dice === 5) {
         result.push(dice);
@@ -88,7 +102,7 @@ export default class Shaker {
     });
     return result;
   }
-  getAllCombinations(dices = this.dices) {
+  getAllCombinations(dices = this.dices): AllCombinations {
     let singleNumbers = this.getSingleNumber(dices);
     const sameNumbers = this.getSameNumbers(dices);
     singleNumbers = singleNumbers.filter((num) =>
@@ -104,7 +118,12 @@ export default class Shaker {
       singleNumbers,
     };
   }
-  getPoints(selectedDices: number[]) {
+  getPoints(selectedDices: number[]): {
+    sameNumbers?: SameNumberPoints;
+    singleNumbers?: SingleNumberPoints;
+    threePairs?: ThreePairsPoints;
+    straight?: StraightPoints;
+  } {
     const combs = this.getAllCombinations(selectedDices);
     const sameNumbersPoints = combs.sameNumbers.length
       ? [
